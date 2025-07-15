@@ -26,6 +26,8 @@ func (d *Dependency) ValidateToken(c *gin.Context) {
 		return
 	}
 
+	tokenData.Token = auth
+
 	c.Set("token", tokenData)
 
 	c.Next()

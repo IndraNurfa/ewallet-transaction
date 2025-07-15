@@ -21,6 +21,7 @@ func ServeHTTP() {
 
 	transactionV1 := r.Group("/transaction/v1")
 	transactionV1.POST("/create", d.ValidateToken, d.TransactionApi.CreateTransaction)
+	transactionV1.PUT("/update-status/:reference", d.ValidateToken, d.TransactionApi.UpdateStatusTransaction)
 
 	err := r.Run(":" + helpers.GetEnv("PORT", "8080"))
 	if err != nil {
@@ -40,18 +41,19 @@ func dependencyInject() Dependency {
 		HealthcheckServices: healthcheckSvc,
 	}
 
+	external := &external.External{}
+
 	transactionRepo := &repository.TransactionRepo{
 		DB: helpers.DB,
 	}
 
 	transactionSvc := &services.TransactionService{
 		TransactionRepo: transactionRepo,
+		External:        external,
 	}
 	transactionAPI := &api.TransactionAPI{
 		TransactionService: transactionSvc,
 	}
-
-	external := &external.External{}
 
 	return Dependency{
 		HealthcheckApi: healthcheckAPI,

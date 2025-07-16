@@ -107,3 +107,69 @@ func (api *TransactionAPI) UpdateStatusTransaction(c *gin.Context) {
 
 	helpers.SendResponseHTTP(c, http.StatusCreated, constants.SuccessMessage, nil)
 }
+
+func (api *TransactionAPI) GetTransaction(c *gin.Context) {
+	var (
+		log = helpers.Logger
+	)
+
+	token, ok := c.Get("token")
+	if !ok {
+		log.Error("failed to get token")
+		helpers.SendResponseHTTP(c, http.StatusInternalServerError, constants.ErrServerError, nil)
+		return
+	}
+
+	tokenData, ok := token.(models.TokenData)
+	if !ok {
+		log.Error("failed to parse token data")
+		helpers.SendResponseHTTP(c, http.StatusInternalServerError, constants.ErrServerError, nil)
+		return
+	}
+
+	resp, err := api.TransactionService.GetTransaction(c.Request.Context(), int(tokenData.UserID))
+	if err != nil {
+		log.Error("failed to get transaction: ", err)
+		helpers.SendResponseHTTP(c, http.StatusInternalServerError, constants.ErrServerError, nil)
+		return
+	}
+
+	helpers.SendResponseHTTP(c, http.StatusOK, constants.SuccessMessage, resp)
+}
+
+func (api *TransactionAPI) GetTransactionDetail(c *gin.Context) {
+	var (
+		log  = helpers.Logger
+		resp models.Transaction
+	)
+
+	reference := c.Param("reference")
+	if reference == "" {
+		log.Error("failed to get reference")
+		helpers.SendResponseHTTP(c, http.StatusInternalServerError, constants.ErrServerError, nil)
+		return
+	}
+
+	token, ok := c.Get("token")
+	if !ok {
+		log.Error("failed to get token")
+		helpers.SendResponseHTTP(c, http.StatusInternalServerError, constants.ErrServerError, nil)
+		return
+	}
+
+	_, ok = token.(models.TokenData)
+	if !ok {
+		log.Error("failed to parse token data")
+		helpers.SendResponseHTTP(c, http.StatusInternalServerError, constants.ErrServerError, nil)
+		return
+	}
+
+	resp, err := api.TransactionService.GetTransactionDetail(c.Request.Context(), reference)
+	if err != nil {
+		log.Error("failed to get transaction detail: ", err)
+		helpers.SendResponseHTTP(c, http.StatusInternalServerError, constants.ErrServerError, nil)
+		return
+	}
+
+	helpers.SendResponseHTTP(c, http.StatusOK, constants.SuccessMessage, resp)
+}

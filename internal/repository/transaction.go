@@ -24,7 +24,7 @@ func (r *TransactionRepo) GetTransactionByReference(ctx context.Context, referen
 
 	sql := r.DB.Where("reference=?", reference)
 
-	if includeRefund {
+	if !includeRefund {
 		sql = sql.Where("transaction_type != ? ", constants.TransactionTypeRefund)
 	}
 
@@ -35,4 +35,12 @@ func (r *TransactionRepo) GetTransactionByReference(ctx context.Context, referen
 
 func (r *TransactionRepo) UpdateStatusTransaction(ctx context.Context, reference, status, additional_info string, now time.Time) error {
 	return r.DB.Exec("UPDATE transactions SET transaction_status = ?, additional_info = ?, updated_at = ? WHERE REFERENCE = ?", status, additional_info, now, reference).Error
+}
+
+func (r *TransactionRepo) GetTransaction(ctx context.Context, userID int) ([]models.Transaction, error) {
+	var (
+		resp []models.Transaction
+	)
+	err := r.DB.Debug().Where("user_id = ?", userID).Find(&resp).Order("id DESC").Error
+	return resp, err
 }

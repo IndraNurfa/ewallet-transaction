@@ -21,6 +21,7 @@ func ServeHTTP() {
 
 	transactionV1 := r.Group("/transaction/v1")
 	transactionV1.POST("/create", d.ValidateToken, d.TransactionApi.CreateTransaction)
+	transactionV1.POST("/refund", d.ValidateToken, d.TransactionApi.RefundTransaction)
 	transactionV1.PUT("/update-status/:reference", d.ValidateToken, d.TransactionApi.UpdateStatusTransaction)
 	transactionV1.GET("/:reference", d.ValidateToken, d.TransactionApi.GetTransactionDetail)
 	transactionV1.GET("/", d.ValidateToken, d.TransactionApi.GetTransaction)

@@ -5,4 +5,5 @@ type TokenData struct {
 	Username string
 	FullName string
 	Token    string
+	Email    string
 }

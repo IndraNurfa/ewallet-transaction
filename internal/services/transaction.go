@@ -46,7 +46,7 @@ func (s *TransactionService) CreateTransaction(ctx context.Context, req *models.
 	return resp, nil
 }
 
-func (s *TransactionService) UpdateStatusTransaction(ctx context.Context, tokenData *models.TokenData, req *models.UpdateStatusTransaction) error {
+func (s *TransactionService) UpdateStatusTransaction(ctx context.Context, tokenData models.TokenData, req *models.UpdateStatusTransaction) error {
 
 	// get transaction by reference
 	trx, err := s.TransactionRepo.GetTransactionByReference(ctx, req.Reference, false)
@@ -143,6 +143,10 @@ func (s *TransactionService) UpdateStatusTransaction(ctx context.Context, tokenD
 		return errors.Wrap(err, "failed to update status transaction")
 	}
 
+	trx.TransactionStatus = req.TransactionStatus
+
+	s.sendNotification(ctx, tokenData, trx)
+
 	return nil
 }
 
@@ -204,4 +208,18 @@ func (s *TransactionService) RefundTransaction(ctx context.Context, tokenData *m
 
 	return resp, nil
 
+}
+
+func (s *TransactionService) sendNotification(ctx context.Context, tokenData models.TokenData, trx models.Transaction) {
+	if trx.TransactionType == constants.TransactionTypePurchase && trx.TransactionStatus == constants.TransactionStatusSuccess {
+		err := s.External.SendNotification(ctx, tokenData.Email, "purchase_success", map[string]string{
+			"full_name":   tokenData.FullName,
+			"description": trx.Description,
+			"reference":   trx.Reference,
+			"date":        trx.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+		if err != nil {
+			helpers.Logger.Warn("Failed to send notification: ", err)
+		}
+	}
 }

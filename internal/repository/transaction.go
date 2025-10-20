@@ -4,7 +4,6 @@ import (
 	"context"
 	"ewallet-transaction/constants"
 	"ewallet-transaction/internal/models"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -33,8 +32,8 @@ func (r *TransactionRepo) GetTransactionByReference(ctx context.Context, referen
 	return resp, err
 }
 
-func (r *TransactionRepo) UpdateStatusTransaction(ctx context.Context, reference, status, additional_info string, now time.Time) error {
-	return r.DB.Exec("UPDATE transactions SET transaction_status = ?, additional_info = ?, updated_at = ? WHERE REFERENCE = ?", status, additional_info, now, reference).Error
+func (r *TransactionRepo) UpdateStatusTransaction(ctx context.Context, reference, status, additional_info string) error {
+	return r.DB.Exec("UPDATE transactions SET transaction_status = ?, additional_info = ? WHERE REFERENCE = ?", status, additional_info, reference).Error
 }
 
 func (r *TransactionRepo) GetTransaction(ctx context.Context, userID int) ([]models.Transaction, error) {

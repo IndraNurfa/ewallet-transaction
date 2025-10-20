@@ -3,7 +3,6 @@ package interfaces
 import (
 	"context"
 	"ewallet-transaction/internal/models"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,6 +26,6 @@ type ITransactionService interface {
 type ITransactionRepo interface {
 	CreateTransaction(ctx context.Context, trx *models.Transaction) error
 	GetTransactionByReference(ctx context.Context, reference string, includeRefund bool) (models.Transaction, error)
-	UpdateStatusTransaction(ctx context.Context, reference, status, additional_info string, now time.Time) error
+	UpdateStatusTransaction(ctx context.Context, reference, status, additional_info string) error
 	GetTransaction(ctx context.Context, userID int) ([]models.Transaction, error)
 }

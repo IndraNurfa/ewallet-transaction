@@ -90,15 +90,17 @@ func (s *TransactionService) UpdateStatusTransaction(ctx context.Context, tokenD
 
 	switch trx.TransactionType {
 	case constants.TransactionTypeTopup:
-		if req.TransactionStatus == constants.TransactionStatusSuccess {
+		switch req.TransactionStatus {
+		case constants.TransactionStatusSuccess:
 			_, errUpdateBalance = s.External.CreditBalance(ctx, jwt, reqUpdateBalance)
-		} else if req.TransactionStatus == constants.TransactionStatusReversed {
+		case constants.TransactionStatusReversed:
 			_, errUpdateBalance = s.External.DebitBalance(ctx, jwt, reqUpdateBalance)
 		}
 	case constants.TransactionTypePurchase:
-		if req.TransactionStatus == constants.TransactionStatusSuccess {
+		switch req.TransactionStatus {
+		case constants.TransactionStatusSuccess:
 			_, errUpdateBalance = s.External.DebitBalance(ctx, jwt, reqUpdateBalance)
-		} else if req.TransactionStatus == constants.TransactionStatusReversed {
+		case constants.TransactionStatusReversed:
 			_, errUpdateBalance = s.External.CreditBalance(ctx, jwt, reqUpdateBalance)
 		}
 	}
@@ -136,9 +138,8 @@ func (s *TransactionService) UpdateStatusTransaction(ctx context.Context, tokenD
 		return errors.Wrap(err, "failed to marshal current additional info")
 	}
 
-	now := time.Now()
 	// update status transaction
-	err = s.TransactionRepo.UpdateStatusTransaction(ctx, req.Reference, req.TransactionStatus, string(byteAdditionalInfo), now)
+	err = s.TransactionRepo.UpdateStatusTransaction(ctx, req.Reference, req.TransactionStatus, string(byteAdditionalInfo))
 	if err != nil {
 		return errors.Wrap(err, "failed to update status transaction")
 	}
@@ -206,6 +207,8 @@ func (s *TransactionService) RefundTransaction(ctx context.Context, tokenData *m
 	resp.Reference = refundReference
 	resp.TransactionStatus = transaction.TransactionStatus
 
+	s.sendNotification(ctx, *tokenData, transaction)
+
 	return resp, nil
 
 }
@@ -214,9 +217,64 @@ func (s *TransactionService) sendNotification(ctx context.Context, tokenData mod
 	if trx.TransactionType == constants.TransactionTypePurchase && trx.TransactionStatus == constants.TransactionStatusSuccess {
 		err := s.External.SendNotification(ctx, tokenData.Email, "purchase_success", map[string]string{
 			"full_name":   tokenData.FullName,
-			"description": trx.Description,
+			"amount":      fmt.Sprintf("%.0f", trx.Amount),
 			"reference":   trx.Reference,
+			"description": trx.Description,
 			"date":        trx.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+		if err != nil {
+			helpers.Logger.Warn("Failed to send notification: ", err)
+		}
+	} else if trx.TransactionType == constants.TransactionTypePurchase && trx.TransactionStatus == constants.TransactionStatusFailed {
+		err := s.External.SendNotification(ctx, tokenData.Email, "purchase_failed", map[string]string{
+			"full_name": tokenData.FullName,
+			"amount":    fmt.Sprintf("%.0f", trx.Amount),
+			"status":    "Purchase Failed",
+			"reason":    trx.AddtionalInfo,
+			"date":      trx.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+		if err != nil {
+			helpers.Logger.Warn("Failed to send notification: ", err)
+		}
+	} else if trx.TransactionType == constants.TransactionTypeTopup && trx.TransactionStatus == constants.TransactionStatusSuccess {
+		err := s.External.SendNotification(ctx, tokenData.Email, "topup_success", map[string]string{
+			"full_name": tokenData.FullName,
+			"amount":    fmt.Sprintf("%.0f", trx.Amount),
+			"reference": trx.Reference,
+			"date":      trx.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+		if err != nil {
+			helpers.Logger.Warn("Failed to send notification: ", err)
+		}
+	} else if trx.TransactionType == constants.TransactionTypeTopup && trx.TransactionStatus == constants.TransactionStatusFailed {
+		err := s.External.SendNotification(ctx, tokenData.Email, "topup_failed", map[string]string{
+			"full_name": tokenData.FullName,
+			"amount":    fmt.Sprintf("%.0f", trx.Amount),
+			"status":    "TopUp Failed",
+			"reason":    trx.AddtionalInfo,
+			"date":      trx.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+		if err != nil {
+			helpers.Logger.Warn("Failed to send notification: ", err)
+		}
+	} else if trx.TransactionType == constants.TransactionTypeRefund && trx.TransactionStatus == constants.TransactionStatusSuccess {
+		err := s.External.SendNotification(ctx, tokenData.Email, "refund", map[string]string{
+			"full_name":   tokenData.FullName,
+			"amount":      fmt.Sprintf("%.0f", trx.Amount),
+			"reference":   trx.Reference,
+			"description": trx.Description,
+			"date":        trx.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+		if err != nil {
+			helpers.Logger.Warn("Failed to send notification: ", err)
+		}
+	} else if trx.TransactionType == constants.TransactionTypePurchase && trx.TransactionStatus == constants.TransactionStatusReversed {
+		err := s.External.SendNotification(ctx, tokenData.Email, "purchase_reversed", map[string]string{
+			"full_name": tokenData.FullName,
+			"amount":    fmt.Sprintf("%.0f", trx.Amount),
+			"reference": trx.Reference,
+			"reason":    trx.AddtionalInfo,
+			"date":      trx.UpdatedAt.Format("2006-01-02 15:04:05"),
 		})
 		if err != nil {
 			helpers.Logger.Warn("Failed to send notification: ", err)

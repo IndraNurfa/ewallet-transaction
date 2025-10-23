@@ -4,6 +4,7 @@ import (
 	"context"
 	"ewallet-transaction/constants"
 	"ewallet-transaction/external/proto/tokenvalidation"
+	"ewallet-transaction/helpers"
 	"ewallet-transaction/internal/models"
 	"fmt"
 
@@ -19,7 +20,7 @@ func (*External) ValidateToken(ctx context.Context, token string) (models.TokenD
 		resp models.TokenData
 	)
 
-	conn, err := grpc.Dial("localhost:7000", grpc.WithInsecure())
+	conn, err := grpc.Dial(helpers.GetEnv("UMS_GRPC_HOST", ""), grpc.WithInsecure())
 	if err != nil {
 		return resp, errors.Wrap(err, "failed to dial ums grpc")
 	}
